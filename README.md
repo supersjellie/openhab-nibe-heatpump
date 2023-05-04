@@ -44,7 +44,7 @@ Using the [issues](https://github.com/supersjellie/openhab-nibe-heatpump/issues)
 2. Own a NIBE heatpump :grin:
 3. Have a NIBE uplinke account (or create it, it's free), see [documentation](https://www.nibeuplink.com/)
 4. Install in openhab the NIBE uplink binding, see [documentation](https://www.openhab.org/addons/bindings/nibeuplink/)
-5. Install in openHAB the javascript scriping engine, see [documentation](http://hal9000:8080/settings/addons/automation-jsscripting)
+5. Install in openHAB the javascript scriping engine, see [documentation](https://www.openhab.org/addons/automation/jsscripting/)
 	* This installs the new ECMAscript 2021+ version with OH libraries that somewhere in the future will replace the old (now default) js-script. If you would like to stick to the default build-in version you'll have to change the rules a bit	
 
 ## Create thing
