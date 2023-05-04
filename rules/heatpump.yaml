@@ -1,0 +1,655 @@
+configuration: {}
+triggers:
+  - id: "3"
+    configuration:
+      cronExpression: 10 * * * * ? *
+    type: timer.GenericCronTrigger
+conditions: []
+actions:
+  - inputs: {}
+    id: "2"
+    configuration:
+      type: application/javascript;version=ECMAScript-2021
+      script: >-
+        /*
+
+        Heatpump script version 1.5
+
+
+        (1.0) Reads heatpump raw data and derives what's it is doing (nothing, active heating, passive heating, cooling, boiler heating)
+
+        (1.0) Write result in new item mode (automatic added if needed)
+
+        (1.0) Store temporary items in cache (that survives rule init/sate) with reset item (added if needed)
+
+        (1.1) Added temperature graph popup
+
+        (1.2) Estimate ground temperature (lowest brine-in in 24 hrs)
+
+        (1,2) Added brine, boiler, heat/cool temperature popup
+
+        (1.3) Calculate rolling sum of minutes active in each mode in 24 hrs
+
+        (1.4) Calculate rolling sum of minutes active in each mode in last 3 hrs
+
+        (1.5) Change to standard rule using helper methods
+
+        */
+
+
+        //##settings##
+
+        var scriptName="heatpump";//scriptname is used in logging 
+
+        var group="NibeF1145";//default scriptname also used to find fan items (actually mine is a 1245 but this is what the binding generates)
+
+        var debugMode=true;//log debug as info (easier than changing loglevel in karaf)
+
+
+        console.info(scriptName+"script started");
+
+        var now = time.ZonedDateTime.now();
+
+
+
+        //reset derived info (create reset_calc item when needed)
+
+        var reset=(getAddItem(group,"Reset_Calc").state=='ON');
+
+        if (reset){
+          //reset if needed
+          debug("reset cached data");
+          cache.remove(scriptName+"_data");
+          console.info("resetting cache");  
+          searchFirstItem(group,"Reset_Calc").postUpdate("OFF");
+        }
+
+
+        if (!isAvailable(this.data)){
+          //init cache var
+          this.data= {
+              lastHour:-1,
+              hours:{
+                heat:[],
+                passive:[],
+                cool:[],
+                boiler:[]
+              },
+              last:{
+                heat:0,
+                passive:0,
+                cool:0,
+                boiler:0
+              }
+              
+            };
+        }
+
+
+
+        //get item values
+
+        var brineIn=searchFirstItem(group,"EB100EP14BT10BrineinTemperature");
+
+        var brineOut=searchFirstItem(group,"EB100EP14BT11BrineoutTemperature");
+
+        var supplyOut=searchFirstItem(group,"BT2SupplyTempS1");
+
+        var supplyPump=searchFirstItem(group,"SupplyPumpSpeedEP14");
+
+        var brinePump=searchFirstItem(group,"EP14GP2BrinePumpSpeed");
+
+        var degreeMin=searchFirstItem(group,"DegreeMinutes16Bit");
+
+        var room=searchFirstItem(group,"BT50RoomTempS1");
+
+        var roomAvg=searchFirstItem(group,"Room_Avg");
+
+
+        var brineInTemp=Number.parseFloat(brineIn.state).toFixed(1);
+
+        var brineOutTemp=Number.parseFloat(brineOut.state).toFixed(1);
+
+        var supplyOutTemp=Number.parseFloat(supplyOut.state.split(' ')[0]).toFixed(1); //get rid of unit
+
+        var supplyPumpSpeed=Number.parseFloat(supplyPump.state.split(' ')[0]).toFixed(1);//get rid of unit
+
+        var brinePumpSpeed=Number.parseFloat(brinePump.state.split(' ')[0]).toFixed(1);//get rid of unit
+
+        var degreeMinValue=Number.parseFloat(degreeMin.state).toFixed(1);
+
+        //also use previous value, it can be temporarely be 0
+
+        var degreeMinOldValue=Number.parseFloat(degreeMin.previousState).toFixed(1);
+
+
+        var roomTemp=Number.parseFloat(room.state).toFixed(1);
+
+
+
+        //hotwater analyse, check if temp is lower than start heating for current mode
+
+        var hwMode=searchFirstItem(group,"HotWaterMode").state;
+
+        var hwStart=searchFirstItem(group,"StartTemperatureHWEconomy");
+
+        if (hwMode==1){
+          hwStart=searchFirstItem(group,"StartTemperatureHWNormal");
+        }else if (hwMode==2){
+          hwStart=searchFirstItem(group,"StartTemperatureHWLuxury");  
+        }
+
+        var hwCurrent=searchFirstItem(group,"BT6HWLoad");
+
+        var hwHeat=(Number.parseFloat(hwCurrent.state)-0.1)<=Number.parseFloat(hwStart.state);
+
+
+
+        //what is heatpump doing?
+
+        var action="off";
+
+        var heatpumpMode=0;
+
+        if (brinePumpSpeed==0 && supplyPumpSpeed==0){
+          //both pumps off, so for sure doing nothing
+          action="off";
+          heatpumpMode=0;
+        } else if (supplyOutTemp>=50){
+          //50 degrees, so for sure heating water
+          action="boiler";
+          heatpumpMode=3;
+        } else if (hwHeat && brinePumpSpeed!=0){
+          //brine running and hot water too cold. Probably startup for heating it
+          action="boiler";
+          heatpumpMode=3;
+        } else if ((degreeMinValue>0 || degreeMinOldValue>0) && brinePumpSpeed!=0){
+          //brine running but degree minutes still positive. Probably startup for heating it
+          action="boiler";
+          heatpumpMode=3;
+        } else if ((degreeMinValue!=0 || degreeMinOldValue!=0)  && brinePumpSpeed!=0){
+          //degreeMinutes in use, brine running, active heating
+          action="heating active";
+          heatpumpMode=1;
+        } else if (( degreeMinValue!=0 || degreeMinOldValue!=0) && brinePumpSpeed==0){
+          //degreeMinutes in use, brine not running, passive heating
+          action="heating passive";
+          heatpumpMode=2;
+        }else if (brineInTemp-brineOutTemp>=2){
+          //2 degrees difference so active working. Probably heating up for water
+          action="boiler";
+          heatpumpMode=3;
+        }else {
+          //no degree minutes, small difference in brine temps. Cooling
+          action="cooling";
+          heatpumpMode=4;
+        }
+
+
+        //store result in item mode (create it when needed)
+
+        getAddItem(group,"Mode").postUpdate(heatpumpMode);
+
+
+        //debug message
+
+        console.info("val b-in=%d b-out=%d s-out=%d b-pmp=%d s-pmp=%d degr=%d hwStrt=%d hwMde=%d hwCur=%s actn=%s",brineInTemp,brineOutTemp,supplyOutTemp,brinePumpSpeed,supplyPumpSpeed,degreeMinValue,hwHeat,hwMode,hwCurrent.state,action);
+
+        //console.info(JSON.stringify( data));
+
+
+
+        //added (derived) items
+
+        var groundTemp=getAddItem(group,"Ground_Temp");
+
+        var heatTemp=getAddItem(group,"Heat_Temp");
+
+        var boilerTemp=getAddItem(group,"Boiler_Temp");
+
+        var brineTemp=getAddItem(group,"Brine_Temp");
+
+
+        //check hour
+
+        if (data.lastHour==-1){
+          //first run
+
+          /*The extra minute makes forces rr4j to report also the last hour in minutes.
+          And makes thr data complete (last minute may not be persisted yet) */
+          var yesterday=now.minusHours(24);
+
+          //get lowest brine-in temp, i.e. return temp as guesstimate for ground temperature.
+          var min=Number.parseFloat(brineIn.history.minimumSince(yesterday)).toFixed(1);
+          groundTemp.postUpdate(min+1.0);
+          
+         
+          //now fetch hour data, change to full hour period and go back one hour more (lose extra minute to keep last hour in 'minute mode')
+          var start=yesterday.minusHours(1).minusMinutes(yesterday.minute()).minusMinutes(1);
+          debug("create cache, 25 hours from "+start);
+          
+          //now run through the 25 hours
+          for (let h=0;h<25;h++){
+           
+            //init period
+            let end=start.plusHours(1); 
+            let hour=start.hour();
+         
+            //reset data
+            data.hours.heat[hour]=0;
+            data.hours.cool[hour]=0;
+            data.hours.boiler[hour]=0;
+            data.hours.passive[hour]=0;
+            
+            let response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+brinePump.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let brinePumpPoints=JSON.parse(response);
+            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+supplyPump.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let supplyPumpPoints=JSON.parse(response);
+            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+brineIn.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let brineInPoints=JSON.parse(response);
+            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+brineOut.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let brineOutPoints=JSON.parse(response);
+            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+supplyOut.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let supplyOutPoints=JSON.parse(response);
+            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+degreeMin.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let degreeMinPoints=JSON.parse(response);
+
+            if (brineInPoints.datapoints>70){
+              //should contain 1 per minute, so 60. More than 70 is strange
+              debug("!!!! to many datapoints "+brineInPoints.datapoints);
+            }
+            
+            for (let i=0;i<60;i++){
+              
+              if (i<brineInPoints.datapoints){
+                brineInTemp=Number.parseFloat(brineInPoints.data[i].state).toFixed(1);
+              }
+              if (i<brineOutPoints.datapoints){
+                brineOutTemp=Number.parseFloat(brineOutPoints.data[i].state).toFixed(1);
+              }
+              if (i<supplyOutPoints.datapoints){
+               supplyOutTemp=Number.parseFloat(supplyOutPoints.data[i].state.split(' ')[0]).toFixed(1); //get rid of unit
+              }
+              if (i<supplyPumpPoints.datapoints){
+                supplyPumpSpeed=Number.parseFloat(supplyPumpPoints.data[i].state.split(' ')[0]).toFixed(1);//get rid of unit
+              }
+              if (i<brinePumpPoints.datapoints){
+                brinePumpSpeed=Number.parseFloat(brinePumpPoints.data[i].state.split(' ')[0]).toFixed(1);//get rid of unit
+              }
+              if (i<degreeMinPoints.datapoints){
+                degreeMinValue=Number.parseFloat(degreeMinPoints.data[i].state).toFixed(1);
+              }
+              
+              //what is heatpump doing?
+              action="off";
+              if (brinePumpSpeed==0 && supplyPumpSpeed==0){
+                //both pumps off, so for sure doing nothing
+                action="off";
+              } else if (supplyOutTemp>=50){
+                //50 degrees, so for sure heating water
+                action="boiler";
+              } else if (degreeMinValue!=0 && brinePumpSpeed!=0){
+                //degreeMinutes in use, brine running, active heating
+                action="heating active";
+              } else if (degreeMinValue!=0 && brinePumpSpeed==0){
+                //degreeMinutes in use, brine not running, passive heating
+                action="heating passive";
+              }else if (brineInTemp-brineOutTemp>=2){
+                //2 degrees difference so active working. Probably heating up for water
+                action="boiler";
+              }else {
+                //no degree minutes, small difference in brine temps. Cooling
+                action="cooling";        
+              }
+
+              if (h==0){
+                //first hour is 25 hours ago, this is for completing the running hour total
+                if (action=="boiler"){
+                  data.last.boiler++;
+                } else if (action=="heating active"){
+                  data.last.heat++;
+                } else if (action=="heating passive"){
+                  data.last.passive++;
+                }else if (action=="cooling"){
+                  data.last.cool++;
+                }        
+              }else {
+                //24 hours data per hour
+                if (action=="boiler"){
+                  data.hours.boiler[hour]++;
+                } else if (action=="heating active"){
+                  data.hours.heat[hour]++;
+                } else if (action=="heating passive"){
+                  data.hours.passive[hour]++;
+                }else if (action=="cooling"){
+                  data.hours.cool[hour]++;
+                }
+              }     
+              
+            }
+            
+            start=start.plusHours(1);
+
+          }
+            
+          //now switch to normal mode
+          data.lastHour=now.hour();
+
+
+            
+
+
+          
+        } else if (data.lastHour!=now.hour()){
+          //next hour
+          
+          debug("cache, updating last hour");
+
+          var yesterday=now.minusHours(24).minusMinutes(1);
+          var min=Number.parseFloat(brineIn.history.minimumSince(yesterday)).toFixed(1);
+          groundTemp.postUpdate(min+1.0);
+
+          //advance period
+          data.lastHour=now.hour();
+          
+          //keep data of erased hour
+          data.last.heat=data.hours.heat[data.lastHour];
+          data.last.cool=data.hours.cool[data.lastHour];
+          data.last.boiler=data.hours.boiler[data.lastHour];
+          data.last.passive=data.hours.passive[data.lastHour];
+          
+          //reset data for new hour
+          data.hours.heat[data.lastHour]=0;
+          data.hours.cool[data.lastHour]=0;
+          data.hours.boiler[data.lastHour]=0;
+          data.hours.passive[data.lastHour]=0;
+          
+          //add data for first minute
+          if (action=="boiler"){ 
+            data.hours.boiler[now.hour()]++;
+          } else if (action=="heating active"){
+            data.hours.heat[now.hour()]++;
+          } else if (action=="heating passive"){
+            data.hours.passive[now.hour()]++;
+          }else if (action=="cooling"){
+            data.hours.cool[now.hour()]++;
+          }  
+
+
+          
+
+
+          
+        } else {
+          //same hour, add minutes
+          
+          if (action=="boiler"){ 
+            data.hours.boiler[now.hour()]++;
+          } else if (action=="heating active"){
+            data.hours.heat[now.hour()]++;
+          } else if (action=="heating passive"){
+            data.hours.passive[now.hour()]++;
+          }else if (action=="cooling"){
+            data.hours.cool[now.hour()]++;
+          }  
+
+
+         
+        }
+
+
+
+        //now calculate 24 hours totals
+
+        var heatMin=0;
+
+        var passiveMin=0;
+
+        var boilerMin=0;
+
+        var coolMin=0;
+
+
+        for (let h=0;h<24;h++){
+          
+          heatMin+=data.hours.heat[h];
+          passiveMin+=data.hours.passive[h];
+          boilerMin+=data.hours.boiler[h];
+          coolMin+=data.hours.cool[h];
+        }
+
+
+        //correct missing part of current hour
+
+        var m=now.minute();
+
+        heatMin+=Math.round(data.last.heat*(59-m)/60);
+
+        passiveMin+=Math.round(data.last.passive*(59-m)/60);
+
+        boilerMin+=Math.round(data.last.boiler*(59-m)/60);
+
+        coolMin+=Math.round(data.last.cool*(59-m)/60);
+
+
+
+        //last 3 hours
+
+        var heatMin3h=0;
+
+        var hh=0;
+
+        for (let h=0;h<3;h++){
+          hh=(now.hour()-h+24) % 24;
+          heatMin3h+=data.hours.heat[hh];
+        }
+
+        //missing part
+
+        hh=(now.hour()-3+24) % 24;
+
+        heatMin3h+=Math.round(data.hours.heat[hh]*(59-m)/60);
+
+
+        heatMin3h/=3;//per hour
+
+
+        getAddItem(group,"Heat_Min_3h").postUpdate(heatMin3h);
+
+        getAddItem(group,"Heat_Min").postUpdate(heatMin);
+
+        getAddItem(group,"Passive_Min").postUpdate(passiveMin);
+
+        getAddItem(group,"Boiler_Min").postUpdate(boilerMin);
+
+        getAddItem(group,"Cool_Min").postUpdate(coolMin);
+
+
+        //calculate temps (only when running)
+
+
+        //supply heat room
+
+        if (heatpumpMode==1 && supplyOutTemp>=roomTemp) {
+          //heating room
+          heatTemp.postUpdate(supplyOutTemp);
+        } else {
+          //not running, assume roomtemp
+          heatTemp.postUpdate(roomTemp);
+        }
+
+
+        //supply boiler
+
+        if (heatpumpMode==3 && supplyOutTemp>=Number.parseFloat(hwStart.state)){
+          //heating boiler
+          boilerTemp.postUpdate(supplyOutTemp);
+        } else {
+          //not running, assume treshold heating
+          boilerTemp.postUpdate(Number.parseFloat(hwStart.state).toFixed(1));
+        }
+
+
+
+        //brine
+
+        if ((heatpumpMode==1 || heatpumpMode==3 || heatpumpMode==4) && brineOutTemp<Number.parseFloat(groundTemp.state)) {
+          //running
+          brineTemp.postUpdate(brineOutTemp);
+        } else {
+          //not running, assume groundtemp
+          brineTemp.postUpdate(groundTemp.state);
+        }
+
+
+        //done
+
+        console.info(scriptName+" done in "+ (-now.getMillisFromNow())+" millisec");
+
+
+
+        /*
+          ##### functions
+        */
+
+
+        //get an existiing item or create it by (optional) group and name)
+
+        function getAddItem(group,name){
+          let item=searchFirstItem(group,name);
+          if (item==null){
+            if (group==null || group==""){
+              //create item without group and add to model
+              console.info('creating item '+name);
+              item=items.addItem({
+                type: 'Number',
+                name: name,
+                label: name,
+                tags: ['Point']
+              });      
+            } else {
+              //create item with group and add to model
+              console.info('creating item '+group+'_'+name);
+              item=items.addItem({
+                type: 'Number',
+                name: group+'_'+name,
+                label: name,
+                groups: [group],
+                tags: ['Point']
+              });
+            }
+          }
+          
+          return item;
+        }
+
+
+        //search items with (optional) group and name (return null or item)
+
+        function searchFirstItem(group, name){
+          let list=searchItem(group,name);
+          if (list.length>0){
+            return list[0];
+          } else {
+            return null;
+          }
+        }
+
+
+        //search items with (optional) group and name (return null or item)
+
+        function searchBestItem(group, name){
+          let list=searchAllItem(group,name);
+          if (list.length==1){
+            return list[0];
+          } else if (list.length==0){
+            return null;
+          }else {
+            
+            //exact match or shortest endswith _name
+            name=name.toLowerCase();
+            let best="";
+            for (let n of list){
+              if (n.name.toLowerCase()==name){
+                //exact match, always wins
+                return n;
+              } else if (n.name.toLowerCase().endsWith("_"+name) && (best=="" || n.name.length<best.name.length)){
+                //shorter is better
+                best=n;
+              }
+            }
+            if (best!=""){
+              return best;
+            }
+            
+            //shortest endswith name
+            best="";
+            for (let n of list){
+              if (n.name.toLowerCase().endsWith(name) && (best=="" || n.name.length<best.length)){
+                //shorter is better
+                best=n;
+              }
+            }
+            if (best!=""){
+              return best;
+            }
+            
+            //shortest contains name
+            best=list[0];
+            for (let n of list){
+              if (n.name.length<best.name.length){
+                //shorter is better
+                best=n;
+              }
+            }
+            return best;
+          }
+        }
+
+
+
+        //search items with (optional) group and name (return list)
+
+        function searchItem(group, name){
+          let search=name;
+          if (group!=null && group!=""){
+            search=group+"_"+name;
+          }
+          return items.getItems().filter(
+            function(item){
+              return (item.name==this);    
+            }
+          ,search);
+        }
+
+
+        //search items with (optional) group and name (return list)
+
+        function searchAllItem(group, name){
+          let search=name;
+          if (group!=null && group!=""){
+            search=group+"_"+name;
+          }
+          search=search.toLowerCase();
+          return items.getItems().filter(
+            function(item){
+              return (item.name.toLowerCase().contains(this));    
+            }
+          ,search);
+        }
+
+
+        function isAvailable(item){
+          return item!=null && item!=undefined && item!="";
+        }
+
+
+
+        function debug(text){
+          if (debugMode){
+            console.info("(D) "+text);
+          }else {
+            console.debug(text);
+          }
+        }
+    type: script.ScriptAction
