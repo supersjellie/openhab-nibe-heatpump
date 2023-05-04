@@ -3,15 +3,15 @@
 ## Summary
 openHAB had several bindings for a NIBE heatpump but a widget to show the status on your dashboard is missing. That's the reason for this project. In addition to show the status it has a rule to derive information from the raw data. For instance what's is it doing in terms of nothing, heating, passive heating, cooling or heating your boiler. To help to save energy it calculates a running 3 and 24 hours average on minutes in each mode and estimated energy consumption. This enables experiments since it's possible to see if a change increases or decreases heating minutes.
 
-![example 1](images-wiki/nb-o.png?raw=true){width=50%}
-![example 1](images-wiki/nb-h.png?raw=true){width=50%}
-![example 1](images-wiki/nb-p.png?raw=true){width=50%}
+![example 1](images-wiki/nb-o.png?raw=true)
+![example 1](images-wiki/nb-h.png?raw=true)
+![example 1](images-wiki/nb-p.png?raw=true)
 
 left to right, doing nothing, heating and passive heating
 
-![example 1](images-wiki/nb-c.png?raw=true){width=50%}
-![example 1](images-wiki/nb-b.png?raw=true){width=50%}
-![example 1](images-wiki/nb-pop.png?raw=true){width=50%}
+![example 1](images-wiki/nb-c.png?raw=true)
+![example 1](images-wiki/nb-b.png?raw=true)
+![example 1](images-wiki/nb-pop.png?raw=true)
 
 left to right, cooling, boiler and info popup
 
