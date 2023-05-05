@@ -4,105 +4,105 @@ tags:
 props:
   parameters:
     - context: item
-      default: ""
+      defaultValue: ""
       description: Heatpump group
       label: Heatpump group
       name: heatpump
       required: false
       type: TEXT
     - context: item
-      default: _BT50RoomTempS1
+      defaultValue: _BT50RoomTempS1
       description: Item with room temperature
       label: Room Temperature
       name: roomTemp
       required: false
       type: TEXT
     - context: item
-      default: _BT1OutdoorTemperature
+      defaultValue: _BT1OutdoorTemperature
       description: Item with outside temperature
       label: Outside Temperature
       name: outTemp
       required: false
       type: TEXT
     - context: item
-      default: _EP14GP2BrinePumpSpeed
+      defaultValue: _EP14GP2BrinePumpSpeed
       description: Item with Brine Pump Speed (percentage)
       label: Brine Pump
       name: brinePump
       required: false
       type: TEXT
     - context: item
-      default: _EB100EP14BT10BrineinTemperature
+      defaultValue: _EB100EP14BT10BrineinTemperature
       description: Item with Brine In (return to heatpump, usualy warm side)
       label: Brine In
       name: brineIn
       required: false
       type: TEXT
     - context: item
-      default: _EB100EP14BT11BrineoutTemperature
+      defaultValue: _EB100EP14BT11BrineoutTemperature
       description: Item with Brine Out (leaving heatpump, usualy cold side)
       label: Brine Out
       name: brineOut
       required: false
       type: TEXT
     - context: item
-      default: _SupplyPumpSpeedEP14
+      defaultValue: _SupplyPumpSpeedEP14
       description: Item with Supply Pump Speed (percentage)
       label: Supply Pump
       name: supplyPump
       required: false
       type: TEXT
     - context: item
-      default: _EB100EP14BT3ReturnTemp
+      defaultValue: _EB100EP14BT3ReturnTemp
       description: Item with Supply In (return to heatpump, usualy cold side)
       label: Supply In
       name: supplyIn
       required: false
       type: TEXT
     - context: item
-      default: _BT2SupplyTempS1
+      defaultValue: _BT2SupplyTempS1
       description: Item with Supply Out (leaving heatpump, usualy warm side)
       label: Supply Out
       name: supplyOut
       required: false
       type: TEXT
     - context: item
-      default: _BT7HWTop
+      defaultValue: _BT7HWTop
       description: Item with boiler temperature
       label: Boiler Temperature
       name: boilerWaterTemp
       required: false
       type: TEXT
     - context: item
-      default: _Ground_Temp
+      defaultValue: _Ground_Temp
       description: Item with ground
       label: Ground Temperature
       name: groundTemp
       required: false
       type: TEXT
     - context: item
-      default: _Brine_Temp
+      defaultValue: _Brine_Temp
       description: Item with (corrected) brine temp
       label: Brine Temperature
       name: brineTemp
       required: false
       type: TEXT
     - context: item
-      default: _Heat_Temp
+      defaultValue: _Heat_Temp
       description: Item with (filtered) heat temp
       label: Heat Temperature
       name: heatTemp
       required: false
       type: TEXT
     - context: item
-      default: _Boiler_Temp
+      defaultValue: _Boiler_Temp
       description: Item with (filtered) boiler temp
       label: Boiler Temperature
       name: boilerTemp
       required: false
       type: TEXT
     - context: item
-      default: _Mode
+      defaultValue: _Mode
       description: Item with derived heatpump mode (0-5)
       label: Heatpump mode
       name: mode
@@ -114,7 +114,7 @@ component: f7-card
 config:
   key: = "heatpump" + items.timertick_hour.state
 slots:
-  default:
+  defaultValue:
     - component: f7-badge
       config:
         bgColor: rgba(0,0,0,0.0)
@@ -377,7 +377,7 @@ slots:
         style:
           --f7-popover-bg-color: rgb(50,50,25)
       slots:
-        default:
+        defaultValue:
           - component: f7-list
             config:
               simpleList: true
@@ -390,7 +390,7 @@ slots:
                 padding: 5px 5px
               xsmallInset: true
             slots:
-              default:
+              defaultValue:
                 - component: oh-list-item
                   config:
                     style:
@@ -429,7 +429,7 @@ slots:
         style:
           --f7-popover-bg-color: rgb(50,50,25)
       slots:
-        default:
+        defaultValue:
           - component: oh-chart
             config:
               height: 150px
@@ -505,7 +505,7 @@ slots:
         style:
           --f7-popover-bg-color: rgb(50,50,25)
       slots:
-        default:
+        defaultValue:
           - component: oh-chart
             config:
               height: 150px
@@ -581,7 +581,7 @@ slots:
         style:
           --f7-popover-bg-color: rgb(50,50,25)
       slots:
-        default:
+        defaultValue:
           - component: oh-chart
             config:
               height: 150px
@@ -657,7 +657,7 @@ slots:
         style:
           --f7-popover-bg-color: rgb(50,50,25)
       slots:
-        default:
+        defaultValue:
           - component: oh-chart
             config:
               height: 150px
