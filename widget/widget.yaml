@@ -4,112 +4,97 @@ tags:
 props:
   parameters:
     - context: item
-      default: ""
       description: Heatpump group
       label: Heatpump group
       name: heatpump
       required: false
       type: TEXT
     - context: item
-      default: _BT50RoomTempS1
       description: Item with room temperature
       label: Room Temperature
       name: roomTemp
       required: false
       type: TEXT
     - context: item
-      default: _BT1OutdoorTemperature
       description: Item with outside temperature
       label: Outside Temperature
       name: outTemp
       required: false
       type: TEXT
     - context: item
-      default: _EP14GP2BrinePumpSpeed
       description: Item with Brine Pump Speed (percentage)
       label: Brine Pump
       name: brinePump
       required: false
       type: TEXT
     - context: item
-      default: _EB100EP14BT10BrineinTemperature
       description: Item with Brine In (return to heatpump, usualy warm side)
       label: Brine In
       name: brineIn
       required: false
       type: TEXT
     - context: item
-      default: _EB100EP14BT11BrineoutTemperature
       description: Item with Brine Out (leaving heatpump, usualy cold side)
       label: Brine Out
       name: brineOut
       required: false
       type: TEXT
     - context: item
-      default: _SupplyPumpSpeedEP14
       description: Item with Supply Pump Speed (percentage)
       label: Supply Pump
       name: supplyPump
       required: false
       type: TEXT
     - context: item
-      default: _EB100EP14BT3ReturnTemp
       description: Item with Supply In (return to heatpump, usualy cold side)
       label: Supply In
       name: supplyIn
       required: false
       type: TEXT
     - context: item
-      default: _BT2SupplyTempS1
       description: Item with Supply Out (leaving heatpump, usualy warm side)
       label: Supply Out
       name: supplyOut
       required: false
       type: TEXT
     - context: item
-      default: _BT7HWTop
       description: Item with boiler temperature
       label: Boiler Temperature
       name: boilerWaterTemp
       required: false
       type: TEXT
     - context: item
-      default: _Ground_Temp
       description: Item with ground
       label: Ground Temperature
       name: groundTemp
       required: false
       type: TEXT
     - context: item
-      default: _Brine_Temp
       description: Item with (corrected) brine temp
       label: Brine Temperature
       name: brineTemp
       required: false
       type: TEXT
     - context: item
-      default: _Heat_Temp
       description: Item with (filtered) heat temp
       label: Heat Temperature
       name: heatTemp
       required: false
       type: TEXT
     - context: item
-      default: _Boiler_Temp
       description: Item with (filtered) boiler temp
       label: Boiler Temperature
       name: boilerTemp
       required: false
       type: TEXT
     - context: item
-      default: _Mode
       description: Item with derived heatpump mode (0-5)
       label: Heatpump mode
       name: mode
       required: false
       type: TEXT
   parameterGroups: []
-timestamp: May 2, 2023, 8:06:43 PM
+timestamp: May 5, 2023, 8:09:42 PM
 component: f7-card
 config:
   key: = "heatpump" + items.timertick_hour.state
@@ -167,7 +152,7 @@ slots:
     - component: f7-icon
       config:
         comment: window icon
-        f7: "= items[props.heatpump + props.mode].state==0 ? 'pause_fill' : items[props.heatpump + props.mode].state==1 ? 'flame_fill' : items[props.heatpump + props.mode].state==2 ? 'flame' : items[props.heatpump + props.mode].state==3 ? 'drop_fill' : 'snow' "
+        f7: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==0 ? 'pause_fill' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 ? 'flame_fill' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? 'flame' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? 'drop_fill' : 'snow' "
         size: 27px
         style:
           color: rgb(78,103,105)
@@ -178,7 +163,7 @@ slots:
       config:
         bgColor: rgba(0,0,0,0.0)
         style:
-          background-image: "= items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 ? 'url(/static/nibe-supply-heat.png)' : items[props.heatpump + props.mode].state==4 ? 'url(/static/nibe-supply-cool.png)' : 'url(/static/nibe-supply-off.png)'  "
+          background-image: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? 'url(/static/nibe-supply-heat.png)' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ? 'url(/static/nibe-supply-cool.png)' : 'url(/static/nibe-supply-off.png)'  "
           background-size: 111px
           border-radius: 0px
           comment: room exchanger
@@ -192,7 +177,7 @@ slots:
       config:
         bgColor: rgba(0,0,0,0.0)
         style:
-          background-image: "=items[props.heatpump + props.brinePump].state=='0 %' ? 'url(/static/nibe-brine-off.png)' :  Number.parseFloat(items[props.heatpump + props.brineIn].state) - Number.parseFloat(items[props.heatpump + props.brineOut].state) <=1  ? 'url(/static/nibe-brine-cool.png)' :  'url(/static/nibe-brine-heat.png)'  "
+          background-image: "=items[props.brinePump==null ? props.heatpump+'_EP14GP2BrinePumpSpeed' : props.brinePump].state=='0 %' ? 'url(/static/nibe-brine-off.png)' :  Number.parseFloat(items[props.brineIn==null ? props.heatpump+'_EB100EP14BT10BrineinTemperature' : props.brineIn].state) - Number.parseFloat(items[props.brineOut==null ? props.heatpump+'_EB100EP14BT11BrineoutTemperature' : props.brineOut].state) <=1  ? 'url(/static/nibe-brine-cool.png)' :  'url(/static/nibe-brine-heat.png)'  "
           background-size: 44px
           border-radius: 0px
           comment: brine exchanger
@@ -206,8 +191,8 @@ slots:
       config:
         bgColor: rgba(0,0,0,0.0)
         style:
-          background-image: "=items[props.heatpump + props.mode].state==3 ? 'url(/static/nibe-boiler-heat.png)' : 'url(/static/nibe-boiler-off.png)' "
-          background-image1: "= items[props.heatpump + props.supplyPump].state!='0 %' && Number.parseFloat(items[props.heatpump + props.supplyOut].state.split(' ')[0])>= 50 ? 'url(/static/nibe-boiler-heat.png)' : 'url(/static/nibe-boiler-off.png)' "
+          background-image: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? 'url(/static/nibe-boiler-heat.png)' : 'url(/static/nibe-boiler-off.png)' "
+          background-image1: "= items[props.supplyPump==null ? props.heatpump+'_SupplyPumpSpeedEP14' : props.supplyPump].state!='0 %' && Number.parseFloat(items[props.supplyOut==null ? props.heatpump+'_BT2SupplyTempS1' : props.supplyOut].state.split(' ')[0])>= 50 ? 'url(/static/nibe-boiler-heat.png)' : 'url(/static/nibe-boiler-off.png)' "
           background-size: 35px
           border-radius: 0px
           comment: boiler exchanger
@@ -229,7 +214,7 @@ slots:
           text-align: center
           top: 110px
           width: 50px
-        text: = Number.parseFloat(items[props.heatpump + props.roomTemp].state).toFixed(1)
+        text: "= Number.parseFloat(items[props.roomTemp==null ? props.heatpump+'_BT50RoomTempS1' : props.roomTemp].state).toFixed(1)"
     - component: oh-link
       config:
         action: popover
@@ -242,7 +227,7 @@ slots:
           left: 20px
           position: absolute
           top: 10px
-        text: = Number.parseFloat(items[props.heatpump +props.outTemp].state).toFixed(1)
+        text: "= Number.parseFloat(items[props.outTemp==null ? props.heatpump+'_BT1OutdoorTemperature' : props.outTemp].state).toFixed(1)"
     - component: Label
       config:
         style:
@@ -253,18 +238,18 @@ slots:
           left: 105px
           position: absolute
           top: 255px
-        text: = (Number.parseFloat(items[props.heatpump +props.groundTemp].state)).toFixed(1)
+        text: "= (Number.parseFloat(items[props.groundTemp==null ? props.heatpump+'_Ground_Temp' : props.groundTemp].state)).toFixed(1)"
     - component: Label
       config:
         comment: left heat
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "= items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 ? 'red' : items[props.heatpump + props.mode].state==4 ? 'blue' : 'rgb(95,99,49)'  "
+          color: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? 'red' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ? 'blue' : 'rgb(95,99,49)'  "
           left: 95px
           position: absolute
           top: 178px
-        text: "= items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 ? Math.max(Number.parseFloat(items[props.heatpump + props.supplyIn].state),Number.parseFloat(items[props.heatpump + props.supplyOut].state.split(' ')[0])).toFixed(1) : items[props.heatpump + props.mode].state==4 ? Math.min(Number.parseFloat(items[props.heatpump + props.supplyIn].state),Number.parseFloat(items[props.heatpump + props.supplyOut].state.split(' ')[0])).toFixed(1) : '' "
+        text: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? Math.max(Number.parseFloat(items[props.supplyIn==null ? props.heatpump+'_EB100EP14BT3ReturnTemp' : props.supplyIn].state),Number.parseFloat(items[props.supplyOut==null ? props.heatpump+'_BT2SupplyTempS1' : props.supplyOut].state.split(' ')[0])).toFixed(1) : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ? Math.min(Number.parseFloat(items[props.supplyIn==null ? props.heatpump+'_EB100EP14BT3ReturnTemp' : props.supplyIn].state),Number.parseFloat(items[props.supplyOut==null ? props.heatpump+'_BT2SupplyTempS1' : props.supplyOut].state.split(' ')[0])).toFixed(1) : '' "
     - component: oh-link
       config:
         action: popover
@@ -273,39 +258,39 @@ slots:
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "= items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 ? 'red' : items[props.heatpump + props.mode].state==4 ? 'blue' : 'rgb(95,99,49)'  "
+          color: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? 'red' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ? 'blue' : 'rgb(95,99,49)'  "
           left: 125px
           position: absolute
           text-align: center
           top: 178px
           width: 40px
-        text: "=items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 || items[props.heatpump + props.mode].state==4 ?  Math.round(items[props.heatpump + props.supplyPump].state.split('%')[0])+'%' :  'OFF' "
+        text: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ?  Math.round(items[props.supplyPump==null ? props.heatpump+'_SupplyPumpSpeedEP14' : props.supplyPump].state.split('%')[0])+'%' :  'OFF' "
     - component: Label
       config:
         comment: right heat
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "= items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 ? 'blue' : items[props.heatpump + props.mode].state==4 ? 'red' : 'rgb(95,99,49)'  "
+          color: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? 'blue' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ? 'red' : 'rgb(95,99,49)'  "
           left: 161px
           position: absolute
           text-align: right
           top: 178px
           width: 35px
-        text: "= items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==2 ? Math.min(Number.parseFloat(items[props.heatpump + props.supplyIn].state),Number.parseFloat(items[props.heatpump + props.supplyOut].state.split(' ')[0])).toFixed(1) : items[props.heatpump + props.mode].state==4 ? Math.max(Number.parseFloat(items[props.heatpump + props.supplyIn].state),Number.parseFloat(items[props.heatpump + props.supplyOut].state.split(' ')[0])).toFixed(1) : '' "
+        text: "= items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==2 ? Math.min(Number.parseFloat(items[props.supplyIn==null ? props.heatpump+'_EB100EP14BT3ReturnTemp' : props.supplyIn].state),Number.parseFloat(items[props.supplyOut==null ? props.heatpump+'_BT2SupplyTempS1' : props.supplyOut].state.split(' ')[0])).toFixed(1) : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ? Math.max(Number.parseFloat(items[props.supplyIn==null ? props.heatpump+'_EB100EP14BT3ReturnTemp' : props.supplyIn].state),Number.parseFloat(items[props.supplyOut==null ? props.heatpump+'_BT2SupplyTempS1' : props.supplyOut].state.split(' ')[0])).toFixed(1) : '' "
     - component: Label
       config:
         comment: top brine
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "=items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==3 ? 'blue' : items[props.heatpump + props.mode].state==4 ?  'red' : 'rgb(64,66,33)' "
+          color: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? 'blue' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ?  'red' : 'rgb(64,66,33)' "
           left: 199px
           position: absolute
           text-align: center
           top: 210px
           width: 50px
-        text: "=items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==3 ? Math.min( Number.parseFloat(items[props.heatpump + props.brineOut].state),Number.parseFloat(items[props.heatpump + props.brineIn].state)).toFixed(1) : items[props.heatpump + props.mode].state==4 ?  Math.max( Number.parseFloat(items[props.heatpump + props.brineOut].state),Number.parseFloat(items[props.heatpump + props.brineIn].state)).toFixed(1) : '' "
+        text: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? Math.min( Number.parseFloat(items[props.brineOut==null ? props.heatpump+'_EB100EP14BT11BrineoutTemperature' : props.brineOut].state),Number.parseFloat(items[props.brineIn==null ? props.heatpump+'_EB100EP14BT10BrineinTemperature' : props.brineIn].state)).toFixed(1) : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ?  Math.max( Number.parseFloat(items[props.brineOut==null ? props.heatpump+'_EB100EP14BT11BrineoutTemperature' : props.brineOut].state),Number.parseFloat(items[props.brineIn==null ? props.heatpump+'_EB100EP14BT10BrineinTemperature' : props.brineIn].state)).toFixed(1) : '' "
     - component: oh-link
       config:
         action: popover
@@ -314,26 +299,26 @@ slots:
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "=items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==3 ? 'red' : items[props.heatpump + props.mode].state==4 ?  'blue' : 'rgb(64,66,33)' "
+          color: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? 'red' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ?  'blue' : 'rgb(64,66,33)' "
           left: 199px
           position: absolute
           text-align: center
           top: 230px
           width: 50px
-        text: "=items[props.heatpump + props.brinePump].state=='0 %' ? 'OFF' : Math.round(items[props.heatpump + props.brinePump].state.split('%')[0])+'%' "
+        text: "=items[props.brinePump==null ? props.heatpump+'_EP14GP2BrinePumpSpeed' : props.brinePump].state=='0 %' ? 'OFF' : Math.round(items[props.brinePump==null ? props.heatpump+'_EP14GP2BrinePumpSpeed' : props.brinePump].state.split('%')[0])+'%' "
     - component: Label
       config:
         comment: lower brine
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "=items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==3 ? 'red' : items[props.heatpump + props.mode].state==4 ?  'blue' : 'rgb(64,66,33)' "
+          color: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? 'red' : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ?  'blue' : 'rgb(64,66,33)' "
           left: 199px
           position: absolute
           text-align: center
           top: 255px
           width: 50px
-        text: "=items[props.heatpump + props.mode].state==1 || items[props.heatpump + props.mode].state==3 ? Math.max( Number.parseFloat(items[props.heatpump + props.brineOut].state),Number.parseFloat(items[props.heatpump + props.brineIn].state)).toFixed(1) : items[props.heatpump + props.mode].state==4 ?  Math.min( Number.parseFloat(items[props.heatpump + props.brineOut].state),Number.parseFloat(items[props.heatpump + props.brineIn].state)).toFixed(1) : '' "
+        text: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==1 || items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? Math.max( Number.parseFloat(items[props.brineOut==null ? props.heatpump+'_EB100EP14BT11BrineoutTemperature' : props.brineOut].state),Number.parseFloat(items[props.brineIn==null ? props.heatpump+'_EB100EP14BT10BrineinTemperature' : props.brineIn].state)).toFixed(1) : items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==4 ?  Math.min( Number.parseFloat(items[props.brineOut==null ? props.heatpump+'_EB100EP14BT11BrineoutTemperature' : props.brineOut].state),Number.parseFloat(items[props.brineIn==null ? props.heatpump+'_EB100EP14BT10BrineinTemperature' : props.brineIn].state)).toFixed(1) : '' "
     - component: Label
       config:
         style:
@@ -343,7 +328,7 @@ slots:
           left: 212px
           position: absolute
           top: 104px
-        text: =Number.parseFloat(items[props.heatpump + props.boilerWaterTemp].state).toFixed(1)
+        text: "= Number.parseFloat(items[props.boilerWaterTemp==null ? props.heatpump+'_BT7HWTop' : props.boilerWaterTemp].state).toFixed(1)"
     - component: oh-link
       config:
         action: popover
@@ -352,13 +337,13 @@ slots:
         style:
           --f7-card-bg-color: rgba(0,0,0,0.0)
           --f7-card-box-shadow: none
-          color: "=items[props.heatpump + props.mode].state==3 ? 'red' : 'rgb(64,66,33)' "
+          color: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? 'red' : 'rgb(64,66,33)' "
           left: 199px
           position: absolute
           text-align: center
           top: 126px
           width: 50px
-        text: "=items[props.heatpump + props.mode].state==3 ? Number.parseFloat(items[props.heatpump + props.supplyOut].state.split(' ')[0]).toFixed(1) : 'OFF'"
+        text: "=items[props.mode==null ? props.heatpump+'_Mode' : props.mode].state==3 ? Number.parseFloat(items[props.supplyOut==null ? props.heatpump+'_BT2SupplyTempS1' : props.supplyOut].state.split(' ')[0]).toFixed(1) : 'OFF'"
     - component: oh-button
       config:
         action: popover
@@ -456,7 +441,7 @@ slots:
                 - component: oh-time-series
                   config:
                     areaStyle1: {}
-                    item: =props.heatpump+props.brineTemp
+                    item: "= props.brineTemp==null ? props.heatpump+'_Brine_Temp' : props.brineTemp"
                     itemStyle:
                       color: rgb(50, 200, 50)
                     name: Temperature
@@ -532,7 +517,7 @@ slots:
                 - component: oh-time-series
                   config:
                     areaStyle1: {}
-                    item: =props.heatpump+props.heatTemp
+                    item: "= props.heatTemp==null ? props.heatpump+'_Heat_Temp' : props.heatTemp"
                     itemStyle:
                       color: rgb(50, 200, 50)
                     name: Temperature
@@ -608,7 +593,7 @@ slots:
                 - component: oh-time-series
                   config:
                     areaStyle1: {}
-                    item: =props.heatpump+props.boilerTemp
+                    item: "= props.boilerTemp==null ? props.heatpump+'_Boiler_Temp' : props.boilerTemp"
                     itemStyle:
                       color: rgb(50, 200, 50)
                     name: Temperature
@@ -684,7 +669,7 @@ slots:
                 - component: oh-time-series
                   config:
                     areaStyle1: {}
-                    item: =props.heatpump+props.outTemp
+                    item: "=props.outTemp==null ? props.heatpump+'_BT1OutdoorTemperature' : props.outTemp"
                     itemStyle:
                       color: rgb(50, 200, 50)
                     name: Temperature
