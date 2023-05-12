@@ -1,3 +1,7 @@
+uid: nibe:rule_nibe_heatpump
+label: Nibe Heatpump Rule
+description: Derives information from Nibe Heatpump binding to make widget easier
+configDescriptions: []
 configuration: {}
 triggers:
   - id: "3"
