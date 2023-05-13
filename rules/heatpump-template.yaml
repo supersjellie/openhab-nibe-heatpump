@@ -1,3 +1,4 @@
+uid: supersjellie:nibe_heatpump_rule
 label: Nibe Heatpump Rule
 description: Derives information from Nibe Heatpump binding to make widget easier
 configDescriptions:
