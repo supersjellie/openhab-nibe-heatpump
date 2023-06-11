@@ -13,7 +13,7 @@ actions:
       script: >-
         /*
 
-        Heatpump script version 1.5
+        Heatpump script version 1.6
 
 
         (1.0) Reads heatpump raw data and derives what's it is doing (nothing, active heating, passive heating, cooling, boiler heating)
@@ -120,7 +120,7 @@ actions:
 
         //also use previous value, it can be temporarely be 0
 
-        var degreeMinOldValue=Number.parseFloat(degreeMin.previousState).toFixed(1);
+        var degreeMinOldValue=Number.parseFloat(degreeMin.history.previousState()).toFixed(1);
 
 
         var roomTemp=Number.parseFloat(room.state).toFixed(1);

@@ -1,6 +1,6 @@
 uid: widget_heatpump
 tags:
-  - v1.5
+  - v1.6
 props:
   parameters:
     - context: item
