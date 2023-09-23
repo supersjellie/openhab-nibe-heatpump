@@ -8,6 +8,12 @@ configDescriptions:
     context: item
     required: true
     description: Group/equipment item for heatpump
+  - name: openhaburl
+    type: TEXT
+    label: URL of openHAB
+    context: item
+    required: true
+    description: (root) url to your openHAB installation (including port, f.i. http://myopenhab:8080)
 triggers:
   - id: "3"
     configuration:
@@ -22,7 +28,7 @@ actions:
       script: >-
         /*
 
-        Heatpump script version 1.6
+        Heatpump script version 1.7
 
 
         (1.0) Reads heatpump raw data and derives what's it is doing (nothing, active heating, passive heating, cooling, boiler heating)
@@ -43,6 +49,10 @@ actions:
 
         (1.5) Change to standard rule using helper methods
 
+        (1.6) None, just to keep same version as widget
+
+        (1.7) Fixes for OH 4.x (% pump speed not handled correcty). Put OH name in var (for loading history on init)
+
         */
 
 
@@ -52,7 +62,9 @@ actions:
 
         var group="{{group}}";//default scriptname also used to find fan items (actually mine is a 1245 but this is what the binding generates)
 
-        var debugMode=true;//log debug as info (easier than changing loglevel in karaf)
+        var debugMode=false;//log debug as info (easier than changing loglevel in karaf)
+
+        var openHabUrl="{{openhaburl}}";
 
 
         console.info(scriptName+"script started");
@@ -121,15 +133,15 @@ actions:
 
         var supplyOutTemp=Number.parseFloat(supplyOut.state.split(' ')[0]).toFixed(1); //get rid of unit
 
-        var supplyPumpSpeed=Number.parseFloat(supplyPump.state.split(' ')[0]).toFixed(1);//get rid of unit
+        var supplyPumpSpeed=Number.parseFloat(supplyPump.state.split(' ')[0]*100).toFixed(0);//get rid of unit
 
-        var brinePumpSpeed=Number.parseFloat(brinePump.state.split(' ')[0]).toFixed(1);//get rid of unit
+        var brinePumpSpeed=Number.parseFloat(brinePump.state.split(' ')[0]*100).toFixed(0);//get rid of unit
 
         var degreeMinValue=Number.parseFloat(degreeMin.state).toFixed(1);
 
         //also use previous value, it can be temporarely be 0
 
-        var degreeMinOldValue=Number.parseFloat(degreeMin.history.previousState()).toFixed(1);
+        var degreeMinOldValue=Number.parseFloat(degreeMin.history.previousState().state).toFixed(1);
 
 
         var roomTemp=Number.parseFloat(room.state).toFixed(1);
@@ -151,6 +163,13 @@ actions:
         var hwCurrent=searchFirstItem(group,"BT6HWLoad");
 
         var hwHeat=(Number.parseFloat(hwCurrent.state)-0.1)<=Number.parseFloat(hwStart.state);
+
+
+
+
+        var dd=((degreeMinValue!=0 || degreeMinOldValue!=0)  && brinePumpSpeed!=0);
+
+        console.info("min "+dd+" old="+degreeMinOldValue);
 
 
 
@@ -200,11 +219,13 @@ actions:
         getAddItem(group,"Mode").postUpdate(heatpumpMode);
 
 
+
         //debug message
 
         console.info("val b-in=%d b-out=%d s-out=%d b-pmp=%d s-pmp=%d degr=%d hwStrt=%d hwMde=%d hwCur=%s actn=%s",brineInTemp,brineOutTemp,supplyOutTemp,brinePumpSpeed,supplyPumpSpeed,degreeMinValue,hwHeat,hwMode,hwCurrent.state,action);
 
         //console.info(JSON.stringify( data));
+
 
 
 
@@ -229,7 +250,7 @@ actions:
           var yesterday=now.minusHours(24);
 
           //get lowest brine-in temp, i.e. return temp as guesstimate for ground temperature.
-          var min=Number.parseFloat(brineIn.history.minimumSince(yesterday)).toFixed(1);
+          var min=Number.parseFloat(brineIn.history.minimumSince(yesterday).state).toFixed(1);
           groundTemp.postUpdate(min+1.0);
           
          
@@ -250,19 +271,24 @@ actions:
             data.hours.boiler[hour]=0;
             data.hours.passive[hour]=0;
             
-            let response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+brinePump.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let response=actions.HTTP.sendHttpGetRequest(openHabUrl+"/rest/persistence/items/"+brinePump.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
             let brinePumpPoints=JSON.parse(response);
-            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+supplyPump.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            
+            response=actions.HTTP.sendHttpGetRequest(openHabUrl+"/rest/persistence/items/"+supplyPump.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
             let supplyPumpPoints=JSON.parse(response);
-            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+brineIn.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            
+            response=actions.HTTP.sendHttpGetRequest(openHabUrl+"/rest/persistence/items/"+brineIn.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());  
             let brineInPoints=JSON.parse(response);
-            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+brineOut.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            
+            response=actions.HTTP.sendHttpGetRequest(openHabUrl+"/rest/persistence/items/"+brineOut.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
             let brineOutPoints=JSON.parse(response);
-            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+supplyOut.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+              
+            response=actions.HTTP.sendHttpGetRequest(openHabUrl+"/rest/persistence/items/"+supplyOut.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
             let supplyOutPoints=JSON.parse(response);
-            response=actions.HTTP.sendHttpGetRequest("http://hal9000:8080/rest/persistence/items/"+degreeMin.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
-            let degreeMinPoints=JSON.parse(response);
 
+            response=actions.HTTP.sendHttpGetRequest(openHabUrl+"/rest/persistence/items/"+degreeMin.name+"?starttime="+start.toLocalDateTime()+"&endtime="+end.toLocalDateTime());
+            let degreeMinPoints=JSON.parse(response);
+            
             if (brineInPoints.datapoints>70){
               //should contain 1 per minute, so 60. More than 70 is strange
               debug("!!!! to many datapoints "+brineInPoints.datapoints);
@@ -280,10 +306,10 @@ actions:
                supplyOutTemp=Number.parseFloat(supplyOutPoints.data[i].state.split(' ')[0]).toFixed(1); //get rid of unit
               }
               if (i<supplyPumpPoints.datapoints){
-                supplyPumpSpeed=Number.parseFloat(supplyPumpPoints.data[i].state.split(' ')[0]).toFixed(1);//get rid of unit
+                supplyPumpSpeed=Number.parseFloat(supplyPumpPoints.data[i].state.split(' ')[0]*100).toFixed(0);//get rid of unit
               }
               if (i<brinePumpPoints.datapoints){
-                brinePumpSpeed=Number.parseFloat(brinePumpPoints.data[i].state.split(' ')[0]).toFixed(1);//get rid of unit
+                brinePumpSpeed=Number.parseFloat(brinePumpPoints.data[i].state.split(' ')[0]*100).toFixed(0);//get rid of unit
               }
               if (i<degreeMinPoints.datapoints){
                 degreeMinValue=Number.parseFloat(degreeMinPoints.data[i].state).toFixed(1);
@@ -345,7 +371,11 @@ actions:
           data.lastHour=now.hour();
 
 
+
+
             
+
+
 
 
           
@@ -355,7 +385,7 @@ actions:
           debug("cache, updating last hour");
 
           var yesterday=now.minusHours(24).minusMinutes(1);
-          var min=Number.parseFloat(brineIn.history.minimumSince(yesterday)).toFixed(1);
+          var min=Number.parseFloat(brineIn.history.minimumSince(yesterday).state).toFixed(1);
           groundTemp.postUpdate(min+1.0);
 
           //advance period
@@ -385,7 +415,11 @@ actions:
           }  
 
 
+
+
           
+
+
 
 
           
@@ -401,6 +435,8 @@ actions:
           }else if (action=="cooling"){
             data.hours.cool[now.hour()]++;
           }  
+
+
 
 
          
