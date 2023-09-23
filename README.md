@@ -89,6 +89,10 @@ The create the derived data a rule is needed.
 4. Now change from the GUI config to the code tab
 5. Replace code with the heatpump_rule yaml in folder rules 
 6. save it
+7. edit it
+8. change groupname var to your equipment group (look for: var group="NibeF1145")
+9. change openhabUrl var to your openHAB root url (look for: var openHabUrl="http://hal9000:8080")
+10. save it
 
 ## Widget usage/configuration
 1. Add a new widget to your dashboard/page
